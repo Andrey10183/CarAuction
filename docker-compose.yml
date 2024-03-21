@@ -22,3 +22,100 @@ services:
     ports:
       - 5672:5672
       - 15672:15672
+
+  auction-svc:
+    #Image name is a combination of docker username and image name
+    image: andrey10183/auction-svc:latest
+    build:
+      # . means that run this command in the root  of dir (CarAuction directory)
+      context: .
+      #location of the docker file
+      dockerfile: src/AuctionService/Dockerfile
+
+    # This will override data in our development.appsettings.json file  
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      #internal url for auction service
+      - ASPNETCORE_URLS=http://+:80
+      # two _ means we accesing  RabbitMq:Host section in appsetting file
+      # value matching the name of rabbit container
+      - RabbitMq__Host=rabbitmq
+      #Note that Server name replaced with postgres image name
+      - ConnectionStrings__DefaultConnection=Server=postgres:5432; User Id=postgres; Password=postgrespw; Database=auctions
+      - IdentityServiceUrl=http://identity-svc
+    #external port - 7001 - internal port - 80
+    ports:
+      - 7001:80
+    #Shoe depend on services - wait until that services up and running
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  search-svc:
+    #Image name is a combination of docker username and image name
+    image: andrey10183/search-svc:latest
+    build:
+      # . means that run this command in the root  of dir (CarAuction directory)
+      context: .
+      #location of the docker file
+      dockerfile: src/SearchService/Dockerfile
+
+    # This will override data in our development.appsettings.json file  
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      #internal url for auction service
+      - ASPNETCORE_URLS=http://+:80
+      # two _ means we accesing  RabbitMq:Host section in appsetting file
+      # value matching the name of rabbit container
+      - RabbitMq__Host=rabbitmq
+      #Note that after @ goes name mongodb of mongoDb in docker compose
+      - ConnectionStrings__MongoDbConnection=mongodb://root:mongopw@mongodb
+      - AuctionServiceUrl=http://auction-svc
+    #external port - 7002 - internal port - 80
+    ports:
+      - 7002:80
+    #Show depend on services - wait until that services up and running
+    depends_on:
+      - mongodb
+      - rabbitmq
+
+  identity-svc:
+    #Image name is a combination of docker username and image name
+    image: andrey10183/identity-svc:latest
+    build:
+      # . means that run this command in the root  of dir (CarAuction directory)
+      context: .
+      #location of the docker file
+      dockerfile: src/IdentityService/Dockerfile
+
+    # This will override data in our development.appsettings.json file  
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      #internal url for auction service
+      - ASPNETCORE_URLS=http://+:80
+      #Note that Server name replaced with postgres image name
+      - ConnectionStrings__DefaultConnection=Server=postgres:5432; User Id=postgres; Password=postgrespw; Database=identity
+    #external port - 7001 - internal port - 80
+    ports:
+      - 5000:80
+    #Shoe depend on services - wait until that services up and running
+    depends_on:
+      - postgres
+
+  gateway-svc:
+    #Image name is a combination of docker username and image name
+    image: andrey10183/gateway-svc:latest
+    build:
+      # . means that run this command in the root  of dir (CarAuction directory)
+      context: .
+      #location of the docker file
+      dockerfile: src/GatewayService/Dockerfile
+
+    # This will override data in our development.appsettings.json file  
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      #internal url for auction service
+      - ASPNETCORE_URLS=http://+:80
+    #external port - 7001 - internal port - 80
+    ports:
+      - 6001:80
